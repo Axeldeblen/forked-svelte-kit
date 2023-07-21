@@ -34,7 +34,7 @@ export function load({ params }) {
 
 Thanks to the generated `$types` module, we get full type safety.
 
-A `load` function in a `+page.js` file runs both on the server and in the browser. If your `load` function should _always_ run on the server (because it uses private environment variables, for example, or accesses a database) then it would go in a `+page.server.js` instead.
+A `load` function in a `+page.js` file runs both on the server and in the browser (unless combined with `export const ssr = false`, in which case it will [only run in the browser](https://kit.svelte.dev/docs/page-options#ssr)). If your `load` function should _always_ run on the server (because it uses private environment variables, for example, or accesses a database) then it would go in a `+page.server.js` instead.
 
 A more realistic version of your blog post's `load` function, that only runs on the server and pulls data from a database, might look like this:
 
@@ -479,7 +479,7 @@ This is useful for creating skeleton loading states, for example:
 
 On platforms that do not support streaming, such as AWS Lambda, responses will be buffered. This means the page will only render once all promises resolve.
 
-> Streaming data will only work when JavaScript is enabled. You should avoid returning nested promises from a universal `load` function if the page is server rendered, as these are _not_ streamed — instead, the promise is recreated when the function re-runs in the browser.
+> Streaming data will only work when JavaScript is enabled. You should avoid returning nested promises from a universal `load` function if the page is server rendered, as these are _not_ streamed — instead, the promise is recreated when the function reruns in the browser.
 
 ## Parallel loading
 
@@ -487,7 +487,7 @@ When rendering (or navigating to) a page, SvelteKit runs all `load` functions co
 
 ## Rerunning load functions
 
-SvelteKit tracks the dependencies of each `load` function to avoid re-running it unnecessarily during navigation.
+SvelteKit tracks the dependencies of each `load` function to avoid rerunning it unnecessarily during navigation.
 
 For example, given a pair of `load` functions like these...
 
@@ -529,15 +529,15 @@ export async function load() {
 }
 ```
 
-...the one in `+page.server.js` will re-run if we navigate from `/blog/trying-the-raw-meat-diet` to `/blog/i-regret-my-choices` because `params.slug` has changed. The one in `+layout.server.js` will not, because the data is still valid. In other words, we won't call `db.getPostSummaries()` a second time.
+...the one in `+page.server.js` will rerun if we navigate from `/blog/trying-the-raw-meat-diet` to `/blog/i-regret-my-choices` because `params.slug` has changed. The one in `+layout.server.js` will not, because the data is still valid. In other words, we won't call `db.getPostSummaries()` a second time.
 
-A `load` function that calls `await parent()` will also re-run if a parent `load` function is re-run.
+A `load` function that calls `await parent()` will also rerun if a parent `load` function is rerun.
 
-Dependency tracking does not apply _after_ the `load` function has returned — for example, accessing `params.x` inside a nested [promise](#streaming-with-promises) will not cause the function to re-run when `params.x` changes. (Don't worry, you'll get a warning in development if you accidentally do this.) Instead, access the parameter in the main body of your `load` function.
+Dependency tracking does not apply _after_ the `load` function has returned — for example, accessing `params.x` inside a nested [promise](#streaming-with-promises) will not cause the function to rerun when `params.x` changes. (Don't worry, you'll get a warning in development if you accidentally do this.) Instead, access the parameter in the main body of your `load` function.
 
 ### Manual invalidation
 
-You can also re-run `load` functions that apply to the current page using [`invalidate(url)`](modules#$app-navigation-invalidate), which re-runs all `load` functions that depend on `url`, and [`invalidateAll()`](modules#$app-navigation-invalidateall), which re-runs every `load` function.
+You can also rerun `load` functions that apply to the current page using [`invalidate(url)`](modules#$app-navigation-invalidate), which reruns all `load` functions that depend on `url`, and [`invalidateAll()`](modules#$app-navigation-invalidateall), which reruns every `load` function. Server load functions will never automatically depend on a fetched `url` to avoid leaking secrets to the client.
 
 A `load` function depends on `url` if it calls `fetch(url)` or `depends(url)`. Note that `url` can be a custom identifier that starts with `[a-z]:`:
 
@@ -566,7 +566,7 @@ export async function load({ fetch, depends }) {
 	export let data;
 
 	function rerunLoadFunction() {
-		// any of these will cause the `load` function to re-run
+		// any of these will cause the `load` function to rerun
 		invalidate('app:random');
 		invalidate('https://api.example.com/random-number');
 		invalidate(url => url.href.includes('random-number'));
@@ -578,17 +578,19 @@ export async function load({ fetch, depends }) {
 <button on:click={rerunLoadFunction}>Update random number</button>
 ```
 
-To summarize, a `load` function will re-run in the following situations:
+### When do load functions rerun?
+
+To summarize, a `load` function will rerun in the following situations:
 
 - It references a property of `params` whose value has changed
-- It references a property of `url` (such as `url.pathname` or `url.search`) whose value has changed
-- It calls `await parent()` and a parent `load` function re-ran
-- It declared a dependency on a specific URL via [`fetch`](#making-fetch-requests) or [`depends`](types#public-types-loadevent), and that URL was marked invalid with [`invalidate(url)`](modules#$app-navigation-invalidate)
-- All active `load` functions were forcibly re-run with [`invalidateAll()`](modules#$app-navigation-invalidateall)
+- It references a property of `url` (such as `url.pathname` or `url.search`) whose value has changed. Properties in `request.url` are _not_ tracked
+- It calls `await parent()` and a parent `load` function reran
+- It declared a dependency on a specific URL via [`fetch`](#making-fetch-requests) (universal load only) or [`depends`](types#public-types-loadevent), and that URL was marked invalid with [`invalidate(url)`](modules#$app-navigation-invalidate)
+- All active `load` functions were forcibly rerun with [`invalidateAll()`](modules#$app-navigation-invalidateall)
 
 `params` and `url` can change in response to a `<a href="..">` link click, a [`<form>` interaction](form-actions#get-vs-post), a [`goto`](modules#$app-navigation-goto) invocation, or a [`redirect`](modules#sveltejs-kit-redirect).
 
-Note that re-running a `load` function will update the `data` prop inside the corresponding `+layout.svelte` or `+page.svelte`; it does _not_ cause the component to be recreated. As a result, internal state is preserved. If this isn't what you want, you can reset whatever you need to reset inside an [`afterNavigate`](modules#$app-navigation-afternavigate) callback, and/or wrap your component in a [`{#key ...}`](https://svelte.dev/docs#template-syntax-key) block.
+Note that rerunning a `load` function will update the `data` prop inside the corresponding `+layout.svelte` or `+page.svelte`; it does _not_ cause the component to be recreated. As a result, internal state is preserved. If this isn't what you want, you can reset whatever you need to reset inside an [`afterNavigate`](modules#$app-navigation-afternavigate) callback, and/or wrap your component in a [`{#key ...}`](https://svelte.dev/docs#template-syntax-key) block.
 
 ## Further reading
 
