@@ -29,8 +29,7 @@ import {
 import { get_option } from '../../utils/options.js';
 import { error, json, text } from '../../exports/index.js';
 import { action_json_redirect, is_action_json_request } from './page/actions.js';
-import { INVALIDATED_PARAM } from '../shared.js';
-
+import { is } from 'uvu/assert/index.js';
 /* global __SVELTEKIT_ADAPTER_NAME__ */
 
 /** @type {import('types').RequiredResolveOptions['transformPageChunk']} */
@@ -106,6 +105,8 @@ export async function respond(request, options, manifest, state) {
 			?.split('')
 			.map((node) => node === '1');
 		url.searchParams.delete(INVALIDATED_PARAM);
+
+		console.log(is_data_request, decoded, invalidated_data_nodes);
 	}
 
 	if (!state.prerendering?.fallback) {

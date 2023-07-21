@@ -547,7 +547,7 @@ function get_data(event, options, nodes, global) {
 	try {
 		const strings = nodes.map((node) => {
 			if (!node) return 'null';
-
+			console.log({ node });
 			return `{"type":"data","data":${devalue.uneval(node.data, replacer)},${stringify_uses(node)}${
 				node.slash ? `,"slash":${JSON.stringify(node.slash)}` : ''
 			}}`;
