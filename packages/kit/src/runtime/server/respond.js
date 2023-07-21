@@ -27,6 +27,7 @@ import {
 import { get_option } from '../../utils/options.js';
 import { error, json, text } from '../../exports/index.js';
 import { action_json_redirect, is_action_json_request } from './page/actions.js';
+import { is } from 'uvu/assert/index.js';
 
 /* global __SVELTEKIT_ADAPTER_NAME__ */
 
@@ -96,6 +97,8 @@ export async function respond(request, options, manifest, state) {
 		url.pathname = strip_data_suffix(url.pathname) || '/';
 		invalidated_data_nodes = url.searchParams.get(INVALIDATED_PARAM)?.split('_').map(Boolean);
 		url.searchParams.delete(INVALIDATED_PARAM);
+
+		console.log(is_data_request, decoded, invalidated_data_nodes);
 	}
 
 	if (!state.prerendering?.fallback) {

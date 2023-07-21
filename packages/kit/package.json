@@ -1,5 +1,5 @@
 {
-	"name": "@sveltejs/kit",
+	"name": "axeldeblen/debug-kit",
 	"version": "1.15.9",
 	"description": "The fastest way to build Svelte apps",
 	"repository": {
